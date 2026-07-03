@@ -148,11 +148,11 @@ Run on `facebook/react` repository (500+ Q&A pairs):
 
 ## 🛣️ Roadmap
 
-- [x] Phase 1: Core RAG pipeline (ingestion + retrieval + generation)
-- [ ] Phase 2: Frontend + persistent chat history
-- [ ] Phase 3: RAGAS evaluation + dashboard
-- [ ] Phase 4: Repo persona + PR summarizer
-- [ ] Phase 5: Security + CI/CD + Docker
+- [✓] Phase 1: Core RAG pipeline (ingestion + retrieval + generation)
+- [✓] Phase 2: Frontend + persistent chat history
+- [✓] Phase 3: RAGAS evaluation + dashboard
+- [✓] Phase 4: Repo persona + PR summarizer
+- [✓] Phase 5: Security + CI/CD + Docker
 
 ---
 
