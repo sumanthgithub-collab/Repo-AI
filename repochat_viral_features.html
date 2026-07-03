@@ -1,0 +1,127 @@
+
+<style>
+* { box-sizing: border-box; }
+.phase { margin-bottom: 1.5rem; }
+.phase-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: var(--color-text-tertiary); text-transform: uppercase; margin-bottom: 0.75rem; }
+.feature-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 0.75rem; cursor: pointer; transition: border-color 0.15s; }
+.feature-card:hover { border-color: var(--color-border-primary); }
+.feature-card.highlight { border: 2px solid #185FA5; }
+.fc-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.fc-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; flex-shrink: 0; }
+.num-blue { background: #E6F1FB; color: #0C447C; }
+.num-teal { background: #E1F5EE; color: #085041; }
+.num-amber { background: #FAEEDA; color: #633806; }
+.fc-name { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+.fc-tagline { font-size: 12px; color: var(--color-text-secondary); font-style: italic; margin-bottom: 8px; padding-left: 34px; }
+.fc-example { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); border-radius: 6px; padding: 8px 10px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 8px; }
+.fc-why { font-size: 12px; color: var(--color-text-secondary); padding-left: 34px; line-height: 1.5; }
+.badge-row { display: flex; gap: 6px; flex-wrap: wrap; padding-left: 34px; margin-top: 6px; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); color: var(--color-text-secondary); }
+.badge-hot { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
+.ask-btn { font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 0.5px solid var(--color-border-secondary); cursor: pointer; color: var(--color-text-secondary); background: transparent; margin-top: 8px; margin-left: 34px; display: inline-block; }
+.ask-btn:hover { background: var(--color-background-secondary); }
+</style>
+
+<div style="padding: 0.5rem 0">
+
+<div class="phase">
+  <div class="phase-label">Ship first — this is what makes developers tweet about you</div>
+
+  <div class="feature-card highlight">
+    <div class="fc-top">
+      <div class="fc-num num-blue">1</div>
+      <div class="fc-name">Exact file + line citations in every answer</div>
+    </div>
+    <div class="fc-tagline">"The answer that shows its work"</div>
+    <div class="fc-example">Auth logic is in src/middleware/auth.js lines 34–67<br>JWT token validation: lines 41–52<br>Role check middleware: lines 58–67</div>
+    <div class="fc-why">No other repo chat does this. GitHub Copilot can't. This is the single feature devs will screenshot and post on X. Every screenshot is free marketing.</div>
+    <div class="badge-row"><span class="badge badge-hot">Most viral</span><span class="badge">Hard to copy fast</span><span class="badge">Core moat</span></div>
+    <button class="ask-btn" onclick="sendPrompt('How do I implement file + line citations with RAG and vector search?')">How to implement this? ↗</button>
+  </div>
+
+  <div class="feature-card highlight">
+    <div class="fc-top">
+      <div class="fc-num num-blue">2</div>
+      <div class="fc-name">Auto repo overview on load</div>
+    </div>
+    <div class="fc-tagline">"First 10 seconds = magic"</div>
+    <div class="fc-example">Tech stack: Next.js 14, PostgreSQL, Redis<br>Entry points: app/page.tsx, server/index.ts<br>Auth: JWT via middleware (NextAuth)<br>Key patterns: Server components, tRPC</div>
+    <div class="fc-why">Zero friction to value. User pastes URL, instantly gets a useful summary before even asking a question. This is the "wow" moment that drives word of mouth.</div>
+    <div class="badge-row"><span class="badge badge-hot">First impression</span><span class="badge">Zero clicks</span></div>
+  </div>
+
+  <div class="feature-card highlight">
+    <div class="fc-top">
+      <div class="fc-num num-blue">3</div>
+      <div class="fc-name">Shareable session link</div>
+    </div>
+    <div class="fc-tagline">"Share this repo analysis with your team"</div>
+    <div class="fc-example">repochat.ai/s/abc123<br>— Shared session: github.com/stripe/stripe-node<br>— 4 questions answered, citations included</div>
+    <div class="fc-why">This is your built-in growth loop. Senior dev discovers a bug, gets the answer with citations, shares the link with 5 teammates. Each teammate becomes a new user. Notion, Linear, and Figma all grew this way.</div>
+    <div class="badge-row"><span class="badge badge-hot">Viral loop</span><span class="badge">Zero ad spend needed</span></div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phase-label">Ship second — power features that create daily habit</div>
+
+  <div class="feature-card">
+    <div class="fc-top">
+      <div class="fc-num num-teal">4</div>
+      <div class="fc-name">One-click scans: auth map, secrets, TODOs</div>
+    </div>
+    <div class="fc-tagline">"Instant repo audit"</div>
+    <div class="fc-example">[ Auth map ] [ Find secrets ] [ List TODOs ] [ Dep graph ]</div>
+    <div class="fc-why">Pre-built queries devs run on every new repo they join. Security engineers will use the secrets scan daily. These are the features that make someone pay for Pro.</div>
+    <div class="badge-row"><span class="badge">Retention driver</span><span class="badge">Pro tier anchor</span></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="fc-top">
+      <div class="fc-num num-teal">5</div>
+      <div class="fc-name">PR / commit explainer</div>
+    </div>
+    <div class="fc-tagline">"Paste a PR link, get plain English"</div>
+    <div class="fc-example">github.com/org/repo/pull/1423<br>→ "Refactors payment service to use Stripe webhooks<br>   instead of polling. Adds retry logic (lines 88–102).<br>   Breaking: removes legacy /charge endpoint."</div>
+    <div class="fc-why">Code reviewers open 5–10 PRs a day. If your tool saves them 3 minutes per PR, they'll use it every single day. Daily active use is what gets you to millions of users.</div>
+    <div class="badge-row"><span class="badge">Daily active use</span><span class="badge">Team adoption</span></div>
+    <button class="ask-btn" onclick="sendPrompt('How do I build a PR explainer feature using the GitHub API?')">How to build this? ↗</button>
+  </div>
+
+  <div class="feature-card">
+    <div class="fc-top">
+      <div class="fc-num num-teal">6</div>
+      <div class="fc-name">VS Code / browser extension</div>
+    </div>
+    <div class="fc-tagline">"Ask about any file, right in your editor"</div>
+    <div class="fc-example">Right-click any file → "Ask RepoChat about this"<br>Highlight any function → "Explain this"</div>
+    <div class="fc-why">Context switching kills productivity. If devs can ask questions without leaving VS Code, daily usage explodes. Extensions also rank in the VS Code marketplace — free organic distribution.</div>
+    <div class="badge-row"><span class="badge">Marketplace distribution</span><span class="badge">No context switch</span></div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="phase-label">Ship third — monetization and team growth</div>
+
+  <div class="feature-card">
+    <div class="fc-top">
+      <div class="fc-num num-amber">7</div>
+      <div class="fc-name">Team workspaces + repo pinning</div>
+    </div>
+    <div class="fc-tagline">"Your team's shared repo knowledge base"</div>
+    <div class="fc-why">Individual tool → Team tool = 10x revenue per account. One senior dev adopts it, expenses it for the whole team. This is how you go from $10/mo to $50/seat/mo.</div>
+    <div class="badge-row"><span class="badge">Revenue multiplier</span><span class="badge">Enterprise wedge</span></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="fc-top">
+      <div class="fc-num num-amber">8</div>
+      <div class="fc-name">Exportable repo report (PDF / Notion)</div>
+    </div>
+    <div class="fc-tagline">"Send this codebase audit to your manager"</div>
+    <div class="fc-why">Tech leads and architects need to present findings. A polished, exportable report is something they'll pay for and something that spreads your brand every time they share it.</div>
+    <div class="badge-row"><span class="badge">Passive marketing</span><span class="badge">Enterprise appeal</span></div>
+  </div>
+</div>
+
+</div>

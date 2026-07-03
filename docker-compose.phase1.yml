@@ -1,0 +1,57 @@
+# =============================================================
+# RepoTalk — Phase 1 Testing Compose (Qdrant + AI Service only)
+# Usage: docker-compose -f docker-compose.phase1.yml up --build
+# =============================================================
+
+version: "3.9"
+
+services:
+  # ------------------------------------------------------------------
+  # Qdrant Vector Database (local — no cloud account needed)
+  # ------------------------------------------------------------------
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    container_name: repotalk_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # FastAPI — AI Service
+  # ------------------------------------------------------------------
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: repotalk_ai_service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Always use local Qdrant container (overrides .env for Docker network)
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=
+      # Hot-reload in dev
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./ai_service:/app               # hot-reload: code changes reflected immediately
+      - ai_model_cache:/app/.model_cache # persist downloaded embedding model between runs
+      - ai_cloned_repos:/tmp/cloned_repos
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s   # extra time for embedding model download on first run
+
+volumes:
+  qdrant_data:
+  ai_model_cache:
+  ai_cloned_repos:

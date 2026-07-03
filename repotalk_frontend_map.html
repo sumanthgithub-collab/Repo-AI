@@ -1,0 +1,140 @@
+
+<style>
+.page-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px 16px; margin-bottom: 10px; }
+.page-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.feature-list { list-style: none; padding: 0; margin: 0; }
+.feature-list li { font-size: 12px; color: var(--color-text-secondary); padding: 3px 0; border-bottom: 0.5px solid var(--color-border-tertiary); line-height: 1.5; }
+.feature-list li:last-child { border-bottom: none; }
+.feat-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.section-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin: 18px 0 8px; }
+.badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.badge-week { background: var(--color-background-info); color: var(--color-text-info); }
+.badge-adv { background: #EEEDFE; color: #3C3489; }
+</style>
+
+<div style="padding: 1rem 0;">
+
+<div class="section-label">📄 Pages to Build (Next.js 14 App Router)</div>
+<div class="grid2">
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">🏠</span> Landing Page <span class="badge badge-week">Week 4</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#534AB7"></span>Hero section with tagline + CTA "Try with your repo"</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Feature highlights (RAG, AST, Citations, RAGAS)</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Live usage metrics badge (X repos, Y queries)</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Tech stack section</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Clerk auth — Sign In / Sign Up buttons</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">🔗</span> Repo Ingestion Page <span class="badge badge-week">Week 4</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#0F6E56"></span>GitHub URL input field</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span>Language filter checkboxes (Python, JS, TS, Java, Go)</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span>Ingestion progress bar with live stage updates</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span>Repo Identity Card preview after ingestion</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span>Error handling for private/invalid repos</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">💬</span> Chat Page — Main UI <span class="badge badge-week">Week 4–5</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#185FA5"></span>3-panel layout: Sidebar + Chat + Code viewer</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>Streaming SSE responses word by word</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>File:line citations as clickable chips on each answer</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>Monaco Editor panel — opens file at cited line</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>RAGAS quality badge per answer (green/yellow/red)</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>Follow-up question suggestions (3 buttons after each answer)</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>"Summarize this session" button</li>
+    <li><span class="feat-dot" style="background:#185FA5"></span>Message bookmarking (star icon)</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">📁</span> Sidebar (inside Chat) <span class="badge badge-week">Week 5</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#BA7517"></span>Repo file tree (collapsible)</li>
+    <li><span class="feat-dot" style="background:#BA7517"></span>Repo Identity Card (stack, language, conventions)</li>
+    <li><span class="feat-dot" style="background:#BA7517"></span>Past sessions list (auto-named by first question)</li>
+    <li><span class="feat-dot" style="background:#BA7517"></span>Search within chat history (all sessions)</li>
+    <li><span class="feat-dot" style="background:#BA7517"></span>Bookmarked messages section</li>
+    <li><span class="feat-dot" style="background:#BA7517"></span>New session button</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">📊</span> Evaluation Dashboard <span class="badge badge-week">Week 6</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#993C1D"></span>Charts: avg faithfulness, relevancy, precision over time</li>
+    <li><span class="feat-dot" style="background:#993C1D"></span>Per-session quality breakdown</li>
+    <li><span class="feat-dot" style="background:#993C1D"></span>Low-quality answer flagging (red badges)</li>
+    <li><span class="feat-dot" style="background:#993C1D"></span>Export RAGAS report button</li>
+    <li><span class="feat-dot" style="background:#993C1D"></span>Langfuse embedded link (cost + latency)</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">🧬</span> Repo Persona Page <span class="badge badge-adv">Week 7</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#639922"></span>Auto-detected stack, frameworks, conventions</li>
+    <li><span class="feat-dot" style="background:#639922"></span>Architecture overview (text-based diagram)</li>
+    <li><span class="feat-dot" style="background:#639922"></span>Auto-generated onboarding guide (markdown rendered)</li>
+    <li><span class="feat-dot" style="background:#639922"></span>Key contributors section</li>
+    <li><span class="feat-dot" style="background:#639922"></span>Download onboarding guide as PDF button</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">🔀</span> PR Summarizer Page <span class="badge badge-adv">Week 8</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#993556"></span>PR URL input field</li>
+    <li><span class="feat-dot" style="background:#993556"></span>Plain-English PR summary</li>
+    <li><span class="feat-dot" style="background:#993556"></span>Impact warnings panel (which functions affected)</li>
+    <li><span class="feat-dot" style="background:#993556"></span>"What changed?" commit diff panel</li>
+    <li><span class="feat-dot" style="background:#993556"></span>Webhook status indicator (live/disconnected)</li>
+  </ul>
+</div>
+
+<div class="page-card">
+  <div class="page-title"><span style="font-size:16px">⚙️</span> Settings / Profile <span class="badge badge-week">Week 10</span></div>
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#5F5E5A"></span>Clerk user profile (managed)</li>
+    <li><span class="feat-dot" style="background:#5F5E5A"></span>API usage / rate limit status</li>
+    <li><span class="feat-dot" style="background:#5F5E5A"></span>Connected repos list with delete option</li>
+    <li><span class="feat-dot" style="background:#5F5E5A"></span>Groq API key override (optional)</li>
+    <li><span class="feat-dot" style="background:#5F5E5A"></span>Secret scan warnings per repo</li>
+  </ul>
+</div>
+
+</div>
+
+<div class="section-label">🔧 Global Components (shared across pages)</div>
+<div class="page-card">
+  <ul class="feature-list" style="columns: 2; gap: 20px;">
+    <li><span class="feat-dot" style="background:#534AB7"></span>Navbar with auth state (Clerk)</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Toast notifications (shadcn/ui)</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Loading skeleton screens</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Error boundary with retry</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>RAGAS quality badge component</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Citation chip component (file:line)</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Streaming text renderer (SSE)</li>
+    <li><span class="feat-dot" style="background:#534AB7"></span>Dark/light mode toggle</li>
+  </ul>
+</div>
+
+<div class="section-label">🆓 Free Stack Adjustments (your constraint)</div>
+<div class="page-card">
+  <ul class="feature-list">
+    <li><span class="feat-dot" style="background:#0F6E56"></span><strong style="color:var(--color-text-primary)">LLM:</strong> Groq API (free) → Llama 3.1 70B or Mixtral — replaces Claude API from doc</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span><strong style="color:var(--color-text-primary)">Embeddings:</strong> sentence-transformers locally (BAAI/bge-small-en) — replaces OpenAI embeddings</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span><strong style="color:var(--color-text-primary)">Vector DB:</strong> Qdrant free cloud tier — same as doc, free tier is enough</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span><strong style="color:var(--color-text-primary)">Auth:</strong> Clerk free tier — same as doc</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span><strong style="color:var(--color-text-primary)">DB:</strong> Supabase free tier (PostgreSQL) — replaces Railway PostgreSQL</li>
+    <li><span class="feat-dot" style="background:#0F6E56"></span><strong style="color:var(--color-text-primary)">Deploy:</strong> Vercel (frontend) + Render free tier (backend) — same as doc</li>
+  </ul>
+</div>
+</div>

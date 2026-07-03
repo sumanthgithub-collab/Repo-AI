@@ -1,0 +1,95 @@
+// RepoTalk production Prisma schema
+// PostgreSQL via Supabase, Render Postgres, Neon, or another managed provider.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  clerkId           String   @unique
+  email             String   @unique
+  stripeCustomerId  String?  @unique
+  plan              String   @default("free")
+  planExpiresAt     DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  repos         Repo[]
+  sessions      Session[]
+  subscription  Subscription?
+}
+
+model Repo {
+  id                 String   @id @default(cuid())
+  githubUrl          String
+  name               String
+  languages          String   @default("py,js,ts")
+  framework          String?
+  conventions        String?
+  status             String   @default("PENDING")
+  chunkCount         Int      @default(0)
+  errorMsg           String?
+  personaJson        String?
+  personaGeneratedAt DateTime?
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions           Session[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  title     String?
+  repoId    String
+  repo      Repo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, repoId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  role       String
+  content    String
+  citations  String?
+  ragasScore String?
+  bookmarked Boolean  @default(false)
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([bookmarked])
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String   @unique
+  stripePriceId        String
+  stripeCustomerId     String
+  status               String
+  plan                 String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([stripeSubscriptionId])
+}

@@ -1,0 +1,84 @@
+# =============================================================
+# RepoTalk — Root .gitignore
+# =============================================================
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# ---- Node / Frontend / Gateway ----
+node_modules/
+.next/
+.turbo/
+out/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---- Python / AI Service ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env/
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ---- Environment variables ----
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+# NEVER commit real secrets — only .env.example is tracked
+
+# ---- Docker ----
+# (Dockerfiles ARE committed, only generated artifacts are ignored)
+
+# ---- Repos cloned for ingestion (temp storage) ----
+ai_service/tmp/cloned_repos/
+
+# ---- Model cache (downloaded locally — can be large) ----
+ai_service/.model_cache/
+ai_service/models/
+
+# ---- Logs ----
+logs/
+*.log
+ai_service/logs/
+
+# ---- Prisma ----
+gateway/prisma/migrations/.migration_lock
+
+# ---- Test artifacts ----
+test-results/
+playwright-report/
+coverage/
+
+# ---- Docs assets (generated) ----
+docs/demo.gif

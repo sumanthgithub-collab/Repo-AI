@@ -1,0 +1,11 @@
+.env
+.venv*
+venv*
+__pycache__
+.pytest_cache
+.qdrant_local*
+.model_cache
+repos_cache
+tmp*
+logs
+*.log

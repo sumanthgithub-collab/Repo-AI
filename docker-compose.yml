@@ -1,0 +1,126 @@
+# =============================================================
+# RepoTalk — Docker Compose (Local Development)
+# Run: docker-compose up --build
+# This brings up every service in one command.
+# =============================================================
+
+version: "3.9"
+
+services:
+  # ------------------------------------------------------------------
+  # Qdrant Vector Database
+  # ------------------------------------------------------------------
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    container_name: repotalk_qdrant
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+  # ------------------------------------------------------------------
+  # Redis (for caching and rate limiting)
+  # Dev uses local Redis; prod uses Upstash Redis (no container needed)
+  # ------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: repotalk_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ------------------------------------------------------------------
+  # FastAPI — AI Service (Ingestion + Retrieval + LLM)
+  # ------------------------------------------------------------------
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: repotalk_ai_service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=
+    volumes:
+      - ./ai_service:/app             # hot-reload in dev
+      - ai_model_cache:/app/.model_cache
+      - ai_cloned_repos:/app/tmp/cloned_repos
+    depends_on:
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ------------------------------------------------------------------
+  # Node.js — Gateway Service (Auth + Sessions + SSE Proxy)
+  # ------------------------------------------------------------------
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile.dev
+    container_name: repotalk_gateway
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - AI_SERVICE_URL=http://ai_service:8000
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./gateway:/app               # hot-reload
+      - gateway_node_modules:/app/node_modules
+    depends_on:
+      ai_service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ------------------------------------------------------------------
+  # Next.js Frontend (dev server inside Docker for full-stack local dev)
+  # In prod, Next.js is deployed on Vercel — no container needed.
+  # ------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: repotalk_frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NEXT_PUBLIC_GATEWAY_URL=http://localhost:4000
+      - PORT=3000
+    volumes:
+      - ./frontend:/app               # hot-reload
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  redis_data:
+  ai_model_cache:
+  ai_cloned_repos:
+  frontend_node_modules:
+  gateway_node_modules:

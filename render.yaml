@@ -1,0 +1,86 @@
+services:
+  # -----------------------------------------
+  # Node.js API Gateway
+  # FREE: Render free web service (spins down
+  # after 15min inactivity — acceptable for
+  # portfolio/demo use. Upgrade to 'starter'
+  # ($7/mo) for always-on production traffic.)
+  # -----------------------------------------
+  - type: web
+    name: repotalk-gateway
+    env: docker
+    dockerfilePath: ./gateway/Dockerfile
+    dockerContext: ./gateway
+    plan: free
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      # ── Set these manually in the Render dashboard ──
+      - key: DATABASE_URL
+        sync: false  # Supabase PostgreSQL connection string (pooled)
+      - key: DIRECT_URL
+        sync: false  # Supabase direct URL (for migrations)
+      - key: CLERK_SECRET_KEY
+        sync: false  # sk_live_... from Clerk dashboard
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false  # From Upstash console (free tier)
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false  # e.g. https://repotalk.vercel.app
+      - key: CORS_ORIGINS
+        sync: false  # e.g. https://repotalk.vercel.app
+      - key: ALLOW_VERCEL_PREVIEWS
+        value: "true"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false
+      - key: STRIPE_TEAM_PRICE_ID
+        sync: false
+      - key: AI_SERVICE_URL
+        # Render internal DNS — matches the service name below
+        value: http://repotalk-ai-service:8000
+
+  # -----------------------------------------
+  # FastAPI AI Service
+  # FREE: Render free web service.
+  # Note: Downloads ~200MB embedding model on
+  # first cold start. Subsequent starts use
+  # the model cache volume.
+  # RAM: 512MB free tier — sufficient for
+  # all-MiniLM-L6-v2 (22MB model, ~150MB RAM).
+  # -----------------------------------------
+  - type: web
+    name: repotalk-ai-service
+    env: docker
+    dockerfilePath: ./ai_service/Dockerfile
+    dockerContext: ./ai_service
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: GROQ_API_KEY
+        sync: false  # From https://console.groq.com (free, no credit card)
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: LLM_PROVIDER
+        value: groq
+      - key: QDRANT_URL
+        sync: false  # From https://cloud.qdrant.io (free tier)
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: EMBEDDING_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
+      - key: EMBEDDING_DIMENSION
+        value: "384"
+      - key: EMBEDDING_DEVICE
+        value: cpu
+      - key: GITHUB_TOKEN
+        sync: false  # GitHub PAT for PR summarizer (Settings → Developer tokens)

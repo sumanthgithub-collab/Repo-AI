@@ -1,0 +1,499 @@
+# RepoTalk — Complete Implementation Plan (Free Stack)
+
+> **Goal**: Build a production-grade, AI-powered codebase assistant that lets users chat with any GitHub repository — using a **100% free** technology stack with a **Node.js + FastAPI hybrid backend**.
+
+---
+
+## 1. What You Already Have
+
+| File | What It Contains |
+|------|-----------------|
+| `RepoTalk_Roadmap.docx` | Full 12-week roadmap, recruiter strategy, interview scripts, resume bullets |
+| `repotalk_frontend_map.html` | Detailed page-by-page UI spec (8 pages + global components) |
+
+Your roadmap is solid. This plan **adapts it** for your two key constraints:
+1. **$0 budget** — every service must be free tier or self-hosted
+2. **Hybrid backend** — Node.js (Express) for API gateway/auth/real-time + FastAPI (Python) for AI/ML pipeline
+
+---
+
+## 2. Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Vercel)                            │
+│              Next.js 14 · App Router · shadcn/ui · Clerk            │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │ HTTPS
+┌──────────────────────────▼──────────────────────────────────────────┐
+│                   NODE.JS GATEWAY (Render)                          │
+│            Express · Clerk JWT verify · Rate limit                  │
+│     Routes: /api/auth/* · /api/sessions/* · /api/repos/*            │
+│     DB:     Supabase PostgreSQL via Prisma ORM                      │
+│     Cache:  Upstash Redis (free tier)                               │
+│     SSE:    Streams AI responses to frontend                        │
+└──────────┬─────────────────────────────────┬───────────────────────┘
+           │ HTTP (internal)                  │ HTTP (internal)
+┌──────────▼──────────────┐     ┌────────────▼────────────────────┐
+│  FASTAPI — AI SERVICE   │     │  FASTAPI — EVAL SERVICE         │
+│  (Render / local)       │     │  (Render / local)               │
+│                         │     │                                 │
+│  • Repo cloning         │     │  • RAGAS evaluation             │
+│  • AST parsing          │     │  • Score storage                │
+│  • Chunking             │     │  • Dashboard data               │
+│  • Embedding (local)    │     │                                 │
+│  • Qdrant upsert        │     │  LLM: Ollama or Groq            │
+│  • Retrieval + Rerank   │     │  Embeddings: local              │
+│  • LLM generation       │     └─────────────────────────────────┘
+│                         │
+│  LLM: Groq API or       │
+│       Ollama (local)    │
+│  Embeddings: sentence-  │
+│    transformers (local) │
+│  Vector DB: Qdrant Cloud│
+└─────────────────────────┘
+```
+
+### Why This Split?
+
+| Concern | Handled By | Why? |
+|---------|-----------|------|
+| Auth, sessions, CRUD, real-time SSE | **Node.js (Express)** | Non-blocking I/O, excellent Clerk/Prisma/SSE ecosystem |
+| Repo cloning, AST parsing, embeddings, LLM calls | **FastAPI (Python)** | Python dominates ML/NLP — sentence-transformers, Tree-sitter, LangChain all native |
+| Evaluation (RAGAS) | **FastAPI (Python)** | RAGAS is a Python-only library |
+
+> [!IMPORTANT]
+> The Node.js gateway is the **single entry point** for the frontend. It proxies AI requests to FastAPI internally. This means the frontend never calls FastAPI directly — cleaner CORS, simpler auth, one deployment URL.
+
+---
+
+## 3. The Free Stack — Every Component Justified
+
+### 3.1 LLM Inference (replaces Claude API from your roadmap)
+
+You have **two strategies** — use them together for resilience:
+
+| Option | Model | Limits | Best For |
+|--------|-------|--------|----------|
+| **Groq API (Primary)** | Llama 3.3 70B / Llama 4 Maverick | 30 RPM, ~6K–30K TPM, 1000–14400 RPD, **no credit card** | Production queries — fast inference (~500 tok/s) |
+| **Ollama (Fallback/Dev)** | Qwen 3.5 Coder / DeepSeek V3.2 / Llama 4 8B | Unlimited — runs on your machine | Local dev, fallback when Groq rate-limited, offline demos |
+
+**Recommendation**: Use **Groq as primary** (it's blazing fast and free). Build an abstraction layer so you can swap between Groq and Ollama with a single environment variable. For your interview demo, run Ollama locally so you're never dependent on external APIs.
+
+```python
+# ai_service/llm_provider.py — Abstraction pattern
+import os
+from openai import OpenAI
+
+def get_llm_client():
+    provider = os.getenv("LLM_PROVIDER", "groq")  # or "ollama"
+    if provider == "groq":
+        return OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
+    else:
+        return OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
+```
+
+### 3.2 Embeddings (replaces OpenAI text-embedding-3-small)
+
+| Model | Dimensions | Size | Why |
+|-------|-----------|------|-----|
+| **`nomic-ai/nomic-embed-code-v1`** (Primary) | 768 | ~150MB | Purpose-built for **code retrieval** — understands syntax, function signatures |
+| **`BAAI/bge-m3`** (Alternative) | 1024 | ~2GB | Best general-purpose model, supports hybrid search natively |
+| **`BAAI/bge-small-en-v1.5`** (Lightweight) | 384 | ~130MB | If your machine has limited RAM |
+
+**Recommendation**: Start with **`nomic-embed-code-v1`** — it's specifically designed for code and lightweight enough to run on CPU. Run it via `sentence-transformers` in your FastAPI service.
+
+```python
+# ai_service/embedder.py
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("nomic-ai/nomic-embed-code-v1")
+
+def embed(texts: list[str]) -> list[list[float]]:
+    return model.encode(texts, normalize_embeddings=True).tolist()
+```
+
+> [!TIP]
+> You can also run embedding models via **Ollama** (`ollama pull nomic-embed-text`) for a unified local inference setup. This gives you a REST API at `http://localhost:11434/api/embeddings` without writing any Python embedding code.
+
+### 3.3 Vector Database — Qdrant Cloud Free Tier
+
+| Spec | Value |
+|------|-------|
+| CPU | 0.5 vCPU |
+| RAM | 1 GB |
+| Disk | 4 GB |
+| Capacity | ~1M vectors @ 768 dimensions |
+| Cost | **$0** |
+
+> [!WARNING]
+> Qdrant free tier **suspends after 1 week of inactivity** and deletes after 4 weeks. During active development this won't be an issue. For demos, ping the cluster periodically or use Docker locally (`docker run -p 6333:6333 qdrant/qdrant`).
+
+### 3.4 Database — Supabase Free Tier (PostgreSQL)
+
+| Spec | Value |
+|------|-------|
+| Storage | 500 MB |
+| Auth MAUs | 50,000 |
+| API Requests | Unlimited |
+| Cost | **$0** |
+
+Schema managed via **Prisma ORM** from the Node.js gateway.
+
+> [!WARNING]
+> Supabase free tier **pauses after 1 week of inactivity**. You get 2 active projects. This is fine for development — just restart when needed.
+
+### 3.5 Auth — Clerk Free Tier
+
+| Spec | Value |
+|------|-------|
+| Monthly Retained Users | 50,000 |
+| Applications | Unlimited |
+| Cost | **$0** |
+
+Deep Next.js integration. JWT tokens verified in the Node.js gateway.
+
+### 3.6 Caching — Upstash Redis Free Tier
+
+| Spec | Value |
+|------|-------|
+| Commands/day | 10,000 |
+| Storage | 256 MB |
+| Cost | **$0** |
+
+Used for: embedding cache (avoid re-embedding same repos), rate limiting, session tokens.
+
+### 3.7 Observability — Langfuse (Self-Hosted via Docker Compose)
+
+Langfuse is **MIT-licensed and fully open source**. Self-host it inside your Docker Compose stack locally during development. For production demos, use Langfuse Cloud's free tier (50K observations/month).
+
+### 3.8 Deployment
+
+| Component | Platform | Cost |
+|-----------|----------|------|
+| Frontend (Next.js) | **Vercel** | $0 (Hobby plan) |
+| Node.js Gateway | **Render** Free Web Service | $0 (750 hrs/month, cold starts after 15m) |
+| FastAPI AI Service | **Render** Free Web Service | $0 (same pool) |
+| FastAPI Eval Service | **Render** Free Web Service | $0 (same pool) |
+
+> [!IMPORTANT]
+> Render gives you **750 free instance hours total** across all services. Running 3 services 24/7 = 2,160 hours — you'll exceed the limit. **Solution**: Merge the two FastAPI services into one, giving you 2 services × 750 hrs = enough for ~16 hrs/day uptime. For demos, wake them with a health-check cron.
+
+### 3.9 AST Parsing — Tree-sitter
+
+Use **`py-tree-sitter`** (Python bindings) in the FastAPI service. Supports Python, JavaScript, TypeScript, Java, Go, Rust, C/C++.
+
+Alternatively, for the Node.js gateway (if you want file-tree rendering), use **`web-tree-sitter`** (WASM-based, works in Node.js).
+
+---
+
+## 4. Project Structure
+
+```
+RepoTalk/
+├── frontend/                  # Next.js 14 App Router
+│   ├── app/
+│   │   ├── page.tsx           # Landing page
+│   │   ├── ingest/page.tsx    # Repo ingestion
+│   │   ├── chat/[repoId]/page.tsx  # Chat UI
+│   │   ├── eval/page.tsx      # Evaluation dashboard
+│   │   ├── persona/[repoId]/page.tsx  # Repo persona
+│   │   ├── pr/page.tsx        # PR summarizer
+│   │   └── settings/page.tsx  # User settings
+│   ├── components/
+│   │   ├── ChatPanel.tsx
+│   │   ├── CodeViewer.tsx     # Monaco editor
+│   │   ├── CitationChip.tsx
+│   │   ├── QualityBadge.tsx   # RAGAS score badge
+│   │   ├── FileTree.tsx
+│   │   └── StreamingText.tsx  # SSE renderer
+│   ├── lib/
+│   │   └── api.ts             # Axios client → Node gateway
+│   └── package.json
+│
+├── gateway/                   # Node.js Express API Gateway
+│   ├── src/
+│   │   ├── index.ts           # Express app entry
+│   │   ├── middleware/
+│   │   │   ├── auth.ts        # Clerk JWT verification
+│   │   │   └── rateLimit.ts   # Upstash Redis rate limiter
+│   │   ├── routes/
+│   │   │   ├── sessions.ts    # CRUD: sessions, messages, bookmarks
+│   │   │   ├── repos.ts       # Repo management, triggers ingestion
+│   │   │   ├── chat.ts        # Proxies to FastAPI, streams SSE back
+│   │   │   └── eval.ts        # Proxies to FastAPI eval service
+│   │   ├── services/
+│   │   │   └── aiProxy.ts     # HTTP client to FastAPI
+│   │   └── prisma/
+│   │       └── schema.prisma  # User → Repo → Session → Message
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── ai_service/                # FastAPI — AI/ML Pipeline
+│   ├── app/
+│   │   ├── main.py            # FastAPI app
+│   │   ├── routers/
+│   │   │   ├── ingest.py      # Clone → Parse → Chunk → Embed → Store
+│   │   │   ├── query.py       # Retrieve → Rerank → Generate → Cite
+│   │   │   ├── symbols.py     # AST symbol lookup
+│   │   │   ├── persona.py     # Repo profiling + onboarding gen
+│   │   │   └── pr.py          # PR diff analysis + summarization
+│   │   ├── core/
+│   │   │   ├── chunker.py     # 500-token AST-aware chunking
+│   │   │   ├── embedder.py    # sentence-transformers wrapper
+│   │   │   ├── llm_provider.py # Groq/Ollama abstraction
+│   │   │   ├── retriever.py   # Qdrant hybrid search
+│   │   │   ├── reranker.py    # BGE reranker (optional)
+│   │   │   └── ast_parser.py  # Tree-sitter wrapper
+│   │   ├── eval/
+│   │   │   ├── ragas_runner.py # RAGAS evaluation with Ollama/Groq
+│   │   │   └── metrics.py     # Score storage + dashboard data
+│   │   └── config.py          # Environment variables
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── docker-compose.yml         # Local dev: all services + Qdrant + Redis
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # Test → Build → Deploy
+└── README.md
+```
+
+---
+
+## 5. Database Schema (Prisma)
+
+```prisma
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String
+  repos     Repo[]
+  sessions  Session[]
+  createdAt DateTime @default(now())
+}
+
+model Repo {
+  id            String   @id @default(cuid())
+  githubUrl     String
+  name          String
+  languages     String[]  // ["python", "typescript"]
+  framework     String?   // "nextjs", "fastapi", etc.
+  conventions   String?   // auto-detected coding style
+  status        String    @default("pending") // pending | ingesting | ready | error
+  chunkCount    Int       @default(0)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  sessions      Session[]
+  createdAt     DateTime @default(now())
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  title     String?   // auto-named from first question
+  repoId    String
+  repo      Repo     @relation(fields: [repoId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  messages  Message[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  role        String   // "user" | "assistant"
+  content     String
+  citations   Json?    // [{file, line, snippet}]
+  ragasScore  Json?    // {faithfulness, relevancy, precision}
+  bookmarked  Boolean  @default(false)
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id])
+  createdAt   DateTime @default(now())
+}
+```
+
+---
+
+## 6. Revised Week-by-Week Plan
+
+### Phase 1: Core Backend (Weeks 1–3)
+
+#### Week 1 — Environment + Repo Ingestion
+- [  ] Initialize project structure (monorepo with `frontend/`, `gateway/`, `ai_service/`)
+- [  ] Set up `ai_service/` FastAPI project with Poetry/pip
+- [  ] Implement GitHub repo cloning (via `gitpython` or shell `git clone`)
+- [  ] Build file walker: traverse repo, filter by language extensions
+- [  ] Implement AST-aware chunking: 500-token chunks split at function/class boundaries
+- [  ] Integrate `nomic-embed-code-v1` via sentence-transformers
+- [  ] Set up Qdrant Cloud free tier + upsert embeddings with metadata (file, line, language)
+- [  ] Test: clone a real repo → chunks stored in Qdrant
+
+#### Week 2 — Retrieval + LLM Q&A
+- [  ] Build hybrid retrieval: vector similarity + BM25 keyword matching on Qdrant
+- [  ] Implement Groq API integration (Llama 3.3 70B)
+- [  ] Build Ollama fallback path
+- [  ] Write the grounding system prompt (force answers from context only)
+- [  ] Implement citation extraction: parse LLM response for `file:line` references
+- [  ] Build `/query` endpoint: question → retrieve chunks → generate grounded answer
+- [  ] Test: "Where is authentication handled?" → get cited answer
+
+#### Week 3 — AST Parsing + Metadata Enrichment
+- [  ] Install Tree-sitter + language grammars (Python, JS, TS, Java, Go)
+- [  ] AST walker: extract function names, class names, imports per file
+- [  ] Enrich Qdrant payload with AST metadata
+- [  ] Build `/symbols` endpoint: function name → file + line number
+- [  ] Test: "What does the authenticate() function do?" → found via AST metadata
+
+### Phase 2: Frontend + Gateway (Weeks 4–6)
+
+#### Week 4 — Node.js Gateway + Next.js UI
+- [  ] Set up `gateway/` Express project with TypeScript
+- [  ] Integrate Clerk JWT verification middleware
+- [  ] Set up Prisma with Supabase PostgreSQL (schema from Section 5)
+- [  ] Build session/message CRUD routes
+- [  ] Build proxy route to FastAPI for `/chat` and `/ingest`
+- [  ] Initialize Next.js 14 with shadcn/ui
+- [  ] Build Landing Page (hero, features, CTA)
+- [  ] Build Repo Ingestion Page (URL input, progress bar)
+- [  ] Build Chat Page (3-panel: sidebar + chat + Monaco editor)
+- [  ] Implement SSE streaming from Node gateway → frontend
+
+#### Week 5 — Persistent Chat + Sidebar
+- [  ] Session management: create/list/load sessions
+- [  ] Auto-name sessions from first question
+- [  ] Past sessions list in sidebar
+- [  ] Chat history search across sessions
+- [  ] Message bookmarking (star icon)
+- [  ] Repo file tree in sidebar (collapsible)
+- [  ] Citation chips: click → Monaco opens file at line
+
+#### Week 6 — RAGAS Evaluation
+- [  ] Install RAGAS in ai_service
+- [  ] Configure RAGAS to use Ollama/Groq as evaluator LLM (no OpenAI dependency)
+- [  ] Build async evaluation: after each answer, queue RAGAS scoring
+- [  ] Store scores in PostgreSQL via Node gateway
+- [  ] Frontend: Quality badge per answer (green >0.8, yellow 0.6–0.8, red <0.6)
+- [  ] Build Evaluation Dashboard page with charts
+- [  ] Create 20-question test dataset for a popular repo
+- [  ] Run offline RAGAS evaluation, include in README
+
+### Phase 3: Differentiating Features (Weeks 7–9)
+
+#### Week 7 — Repo Persona + Onboarding
+- [  ] Repo Profiler: detect dominant language, frameworks, folder patterns
+- [  ] Generate Repo Identity Card (stack, conventions, key contributors)
+- [  ] Auto-generate onboarding guide from repo structure + README
+- [  ] Architecture diagram (text-based) auto-generation
+- [  ] Show Identity Card in chat sidebar
+
+#### Week 8 — PR Summarizer
+- [  ] GitHub webhook listener for push events
+- [  ] Diff analyzer: identify changed chunks, re-index in Qdrant
+- [  ] Impact analysis: find callers of changed functions
+- [  ] PR Summarizer endpoint: PR URL → plain-English summary
+- [  ] Frontend: "What changed?" panel
+
+#### Week 9 — Multi-Turn Memory
+- [  ] Conversation memory: last 6 messages in every LLM call
+- [  ] Context-aware retrieval: weight search toward recently discussed files
+- [  ] Follow-up suggestions: 3 related questions after each answer
+- [  ] "Summarize this session" button
+
+### Phase 4: Polish + Ship (Weeks 10–12)
+
+#### Week 10 — Security + Monitoring
+- [  ] Rate limiting via Upstash Redis (20 req/min per user)
+- [  ] Secret scanning: warn about hardcoded API keys in repos
+- [  ] Embedding cache in Redis (skip re-embedding same repos)
+- [  ] Langfuse integration: trace LLM calls, log cost/latency
+- [  ] Health check endpoints: `/health`, `/metrics`
+
+#### Week 11 — Docker + CI/CD
+- [  ] Dockerfile for FastAPI (multi-stage, non-root)
+- [  ] Dockerfile for Node gateway
+- [  ] `docker-compose.yml`: gateway + ai_service + Qdrant + Redis
+- [  ] GitHub Actions: test → build → deploy
+- [  ] Pytest suite for core pipeline (ingestion, embedding, retrieval, citations)
+- [  ] Target 70%+ coverage on core functions
+
+#### Week 12 — Career Assets
+- [  ] README with GIF demo, architecture diagram, quick-start
+- [  ] Record demo video: ingest repo → ask 5 questions
+- [  ] Write dev.to article
+- [  ] LinkedIn case study post
+- [  ] Add usage metrics to README
+
+---
+
+## 7. Key Technical Decisions
+
+### 7.1 Why Groq + Ollama (not just one)?
+- **Groq** gives you **blazing fast** inference (500+ tok/s) for free — perfect for live demos where speed impresses recruiters
+- **Ollama** gives you **zero dependency** on external APIs — perfect for offline demos, development, and when Groq rate-limits you
+- The abstraction layer means you switch with one env var: `LLM_PROVIDER=groq` or `LLM_PROVIDER=ollama`
+
+### 7.2 Why `nomic-embed-code-v1` over `bge-small-en`?
+- `bge-small-en` is great for general text but doesn't understand code syntax
+- `nomic-embed-code-v1` is specifically trained on code retrieval tasks — it understands function signatures, variable names, and code structure
+- Both are lightweight enough to run on CPU
+
+### 7.3 Why Node.js gateway instead of just FastAPI for everything?
+- **Prisma ORM** + PostgreSQL has the best DX in Node.js (typed queries, migrations, studio)
+- **Clerk** has first-class Node.js/Next.js SDK — Python SDK is community-maintained
+- **SSE streaming** in Express is trivial and battle-tested
+- **Real-time features** (WebSockets for live ingestion progress) are Node.js's sweet spot
+- Python stays focused on what it does best: ML, NLP, AST parsing
+
+### 7.4 How does inter-service communication work?
+- Node gateway calls FastAPI over **internal HTTP** (on Render, services can communicate within the same region)
+- For streaming responses: FastAPI returns a streaming response → Node gateway pipes it as SSE to the frontend
+- No message queue needed at this scale — keep it simple
+
+---
+
+## 8. Risk Mitigation
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Groq rate limits hit during demo | Demo fails | Automatic fallback to Ollama; cache popular queries in Redis |
+| Qdrant free tier suspended | Can't query vectors | Docker Qdrant locally; health-check cron to keep cloud alive |
+| Supabase pauses from inactivity | DB offline | Health-check cron; easy one-click restart |
+| Render cold starts (30-60s) | Slow first request | Cron job pings services every 14 minutes; show loading skeleton |
+| Embedding model too slow on CPU | Ingestion takes too long | Use lightweight `nomic-embed-code-v1` (768d); batch embed in groups of 32 |
+| RAGAS needs OpenAI by default | Costs money | Configure with Ollama/Groq as evaluator LLM — fully documented approach |
+
+---
+
+## 9. Open Questions
+
+> [!IMPORTANT]
+> **Question 1**: Do you have a GPU available locally (even a basic one like GTX 1650+)? This affects whether we use Ollama with larger models (like DeepSeek V3.2 or Qwen 3.5 Coder 14B) or stick to smaller CPU-friendly models (Llama 4 8B, Phi-3.5).
+
+> [!IMPORTANT]
+> **Question 2**: For the frontend, are you comfortable with TypeScript + shadcn/ui for the Next.js app? Your roadmap mentions Tailwind CSS — shadcn/ui is built on top of Tailwind and gives you pre-built, beautiful components out of the box.
+
+> [!WARNING]
+> **Question 3**: Your roadmap mentions "Clerk" for auth and "Railway" for PostgreSQL. I've replaced Railway with **Supabase** (also free, better free tier). Are you okay with Supabase, or do you prefer another free PostgreSQL host?
+
+> [!NOTE]
+> **Question 4**: For the Ollama setup (your "Palama" mention) — do you want to use it purely as a **development fallback**, or should it be the **primary** LLM provider? Groq gives much faster responses but has daily rate limits. For a project demo, Groq is more impressive.
+
+---
+
+## 10. Verification Plan
+
+### Automated Tests
+- **FastAPI**: `pytest` suite testing ingestion → embedding → retrieval → citation pipeline
+- **Node Gateway**: Jest tests for session CRUD, auth middleware, proxy logic
+- **E2E**: Playwright tests for the full flow (ingest repo → ask question → verify cited answer appears)
+- **RAGAS Offline**: Run against a 20-question benchmark dataset for a known repo
+
+### Manual Verification
+- Ingest 3 different repos (Python, JS, mixed) and verify answer quality
+- Demo walkthrough: Landing → Ingest → Chat → Citations → Evaluation Dashboard
+- Cold start test: wake all services from sleep, measure time to first response
+- Rate limit test: fire 30+ requests/minute and verify 429 responses
+
+### Browser Recording
+- Record the full user journey as a browser video for the walkthrough artifact

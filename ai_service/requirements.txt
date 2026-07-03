@@ -1,0 +1,49 @@
+# =====================================
+# RepoTalk AI Service — Dependencies
+# =====================================
+
+# --- Core Framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-dotenv==1.0.1
+pydantic==2.9.0
+pydantic-settings==2.5.0
+
+# --- LLM & Embeddings ---
+openai==1.50.0
+sentence-transformers==3.1.0
+einops==0.8.0
+# torch is installed separately in Dockerfile using the CPU-only wheel index
+# (no NVIDIA GPU on this machine — Intel Iris Xe integrated graphics only)
+# torch==2.6.0+cpu  ← handled by Dockerfile RUN below
+
+# --- Vector Database ---
+qdrant-client==1.11.0
+
+# --- AST Parsing ---
+tree-sitter==0.23.0
+tree-sitter-python==0.23.0
+tree-sitter-javascript==0.23.0
+tree-sitter-typescript==0.23.0
+tree-sitter-java==0.23.0
+tree-sitter-go==0.23.0
+
+# --- Repo Cloning ---
+gitpython==3.1.43
+
+# --- Evaluation ---
+ragas==0.2.0
+datasets==2.20.0
+
+# --- Observability ---
+langfuse==2.50.0
+
+# --- Utilities ---
+httpx==0.27.0
+tiktoken==0.7.0
+aiofiles==24.1.0
+
+# --- Testing ---
+pytest==8.3.0
+pytest-asyncio==0.24.0
+httpx==0.27.0
